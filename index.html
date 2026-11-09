@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#010208" />
+    <meta
+      name="description"
+      content="天穹星图 · 可交互的 3D 太阳系与近地轨道空间站。点击行星探索程序化三维建模、轨道参数与天体档案。"
+    />
+    <title>天穹星图 · 太阳系与空间站</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23010509'/%3E%3Ccircle cx='24' cy='24' r='4' fill='%238fe8f6'/%3E%3Cellipse cx='24' cy='24' rx='18' ry='7' fill='none' stroke='%238fe8f6' stroke-width='1.2' transform='rotate(-28 24 24)'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20261109b" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./node_modules/three/build/three.module.js",
+          "three/addons/": "./node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body class="mode-solar">
+    <div id="app">
+      <canvas id="space" aria-label="天穹星图：太阳系与空间站三维交互场景"></canvas>
+      <div class="view-fader" id="view-fader" aria-hidden="true"></div>
+
+      <div class="left-scrim" aria-hidden="true"></div>
+      <div class="space-wash" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
+      <div class="scanlines" aria-hidden="true"></div>
+
+      <div class="hud-frame" aria-hidden="true">
+        <i class="corner corner-tl"></i>
+        <i class="corner corner-tr"></i>
+        <i class="corner corner-bl"></i>
+        <i class="corner corner-br"></i>
+        <span class="frame-tick frame-tick-left"></span>
+        <span class="frame-tick frame-tick-right"></span>
+      </div>
+
+      <header class="topbar hud">
+        <a class="brand" id="brand-home" href="#" aria-label="返回当前视图总览">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="4.2" fill="currentColor" />
+              <ellipse cx="24" cy="24" rx="18" ry="7.4" stroke="currentColor" stroke-width="1.1" transform="rotate(-28 24 24)" />
+              <ellipse cx="24" cy="24" rx="18" ry="7.4" stroke="currentColor" stroke-width="1.1" transform="rotate(32 24 24)" opacity=".45" />
+              <circle cx="38.8" cy="13.9" r="1.8" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="brand-copy">
+            <strong>天穹星图</strong>
+            <small>TIANQIONG SOLAR ATLAS</small>
+          </span>
+        </a>
+
+        <div class="top-center">
+          <div class="mode-switch" role="group" aria-label="切换视图">
+            <button class="mode-button is-active" type="button" data-mode="solar" aria-pressed="true">
+              <span>01</span>太阳系
+            </button>
+            <button class="mode-button" type="button" data-mode="station" aria-pressed="false">
+              <span>02</span>空间站
+            </button>
+          </div>
+          <div class="top-meta">
+            <span class="coordinate" id="top-coord-a">HELIOCENTRIC · ECLIPTIC PLANE</span>
+            <span class="coordinate-sep"></span>
+            <span class="coordinate" id="top-coord-b">8 PLANETS · 1 STAR</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <span class="live-pill"><i></i><span id="live-label">LIVE SYSTEM</span></span>
+          <button class="ghost-button" id="mission-button" type="button">
+            任务档案
+            <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="solar-ui">
+        <section class="solar-hero hud solar-overview-only">
+          <div class="eyebrow">
+            <span class="eyebrow-line"></span>
+            HELIOCENTRIC FRAME · 1 AU
+          </div>
+          <h1>
+            太阳系
+            <span>SOLAR SYSTEM</span>
+          </h1>
+          <p class="solar-lede">一颗恒星，八颗行星，<br />以及一段持续了 46 亿年的引力之舞。</p>
+          <div class="solar-stats">
+            <div>
+              <strong>08</strong>
+              <span>行星 / PLANETS</span>
+            </div>
+            <div>
+              <strong>4.6</strong>
+              <span>十亿年 / BILLION YEARS</span>
+            </div>
+            <div>
+              <strong>01</strong>
+              <span>恒星 / STAR</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="solar-index hud solar-overview-only" aria-label="行星索引">
+          <div class="solar-panel-head">
+            <span>行星索引</span>
+            <small>PLANETARY INDEX</small>
+          </div>
+          <div class="planet-list" id="planet-list"></div>
+          <div class="solar-index-footer">
+            <span><i class="legend-dot"></i>点击天体查看 3D 档案</span>
+            <span>ORBITAL SCALE / NOT TO SCALE</span>
+          </div>
+        </aside>
+
+        <div class="solar-footer hud solar-overview-only">
+          <span class="solar-hint">
+            <span class="mouse-glyph" aria-hidden="true"><i></i></span>
+            拖拽旋转 · 滚轮缩放
+          </span>
+          <span class="solar-hint solar-hint-alt">点击行星或右侧名称，进入行星视角</span>
+        </div>
+      </div>
+
+      <div class="solar-labels" id="solar-labels" aria-label="太阳系天体标签"></div>
+
+      <div class="solar-ui planet-only">
+        <button class="planet-back hud" id="planet-back" type="button">
+          <span aria-hidden="true">←</span> 返回太阳系
+        </button>
+        <div class="planet-watermark" id="planet-watermark" aria-hidden="true">EARTH</div>
+
+        <section class="planet-detail hud" id="planet-detail" aria-live="polite">
+          <div class="planet-detail-top">
+            <span class="planet-index" id="planet-index">03</span>
+            <span class="planet-type" id="planet-type">类地行星</span>
+          </div>
+          <h2 id="planet-name">地球</h2>
+          <div class="planet-en" id="planet-en">EARTH</div>
+          <p class="planet-tagline" id="planet-tagline">目前已知唯一存在生命的天体</p>
+          <p class="planet-description" id="planet-description">
+            地球拥有液态水海洋、富氧大气与活跃的板块运动。磁层屏蔽了太阳风，板块循环调节着气候，让复杂生命得以延续。
+          </p>
+
+          <dl class="planet-stats" id="planet-stats"></dl>
+
+          <div class="planet-composition-block">
+            <div class="planet-section-label" id="planet-composition-label">大气 / 组成</div>
+            <div class="composition-bars" id="planet-composition"></div>
+          </div>
+
+          <div class="planet-fact">
+            <span>轨道笔记 / ORBITAL NOTE</span>
+            <p id="planet-fact"></p>
+          </div>
+
+          <div class="earth-station-card" id="earth-station-card">
+            <div class="earth-station-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="10" stroke="currentColor" stroke-width="1" />
+                <ellipse cx="24" cy="24" rx="20" ry="7" stroke="currentColor" stroke-width="1" transform="rotate(-24 24 24)" opacity=".65" />
+                <circle cx="24" cy="24" r="2.6" fill="currentColor" />
+                <circle cx="42" cy="15" r="2" fill="currentColor" />
+              </svg>
+            </div>
+            <div class="earth-station-copy">
+              <span>EARTH ORBIT / TQ-01</span>
+              <strong>天穹空间站</strong>
+              <small>在地球 408.6 km 轨道运行</small>
+            </div>
+            <button class="enter-station" id="enter-station" type="button">进入 ↗</button>
+          </div>
+        </section>
+
+        <nav class="planet-quicknav hud" id="planet-quicknav" aria-label="切换天体"></nav>
+      </div>
+
+      <div class="solar-station-label" id="solar-station-label" hidden>
+        <span class="station-label-dot"></span>
+        <span><b>TQ-01</b> 天穹空间站</span>
+        <small>点击进入</small>
+      </div>
+
+      <main class="hero hud">
+        <div class="eyebrow">
+          <span class="eyebrow-line"></span>
+          ORBITAL OUTPOST · TQ-01
+        </div>
+        <h1>
+          天穹
+          <span>空间站</span>
+        </h1>
+        <p class="hero-lede">在寂静的轨道上，<br />人类建造了第二片陆地。</p>
+        <div class="hero-stats">
+          <div>
+            <strong>408.6</strong>
+            <span>KM · 轨道高度</span>
+          </div>
+          <div>
+            <strong>62.9</strong>
+            <span>M · 太阳翼翼展</span>
+          </div>
+        </div>
+      </main>
+
+      <aside class="telemetry hud" aria-label="轨道遥测">
+        <div class="panel-head">
+          <span>轨道遥测</span>
+          <small>ORBITAL TELEMETRY</small>
+        </div>
+        <div class="altitude-readout">
+          <strong id="telemetry-altitude">408.6</strong>
+          <span>KM</span>
+        </div>
+        <div class="altitude-caption">平均轨道高度 / ALTITUDE</div>
+        <dl class="telemetry-list">
+          <div>
+            <dt>轨道速度</dt>
+            <dd><b id="telemetry-speed">7.663</b><span>km/s</span></dd>
+          </div>
+          <div>
+            <dt>轨道周期</dt>
+            <dd><b id="telemetry-period">92.68</b><span>min</span></dd>
+          </div>
+          <div>
+            <dt>轨道倾角</dt>
+            <dd><b>41.5</b><span>deg</span></dd>
+          </div>
+        </dl>
+        <div class="telemetry-foot">
+          <span id="telemetry-clock">CST --:--:--</span>
+          <span class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        </div>
+      </aside>
+
+      <section class="info-panel hud" id="info-panel" aria-live="polite">
+        <div class="info-top">
+          <span class="info-index" id="info-index">TQ</span>
+          <span class="info-en" id="info-en">TIANQIONG ORBITAL STATION</span>
+        </div>
+        <h2 id="info-title">轨道综合体</h2>
+        <p class="info-role" id="info-role">近地轨道 · 长期驻留平台</p>
+        <p class="info-body" id="info-body">
+          一座在寂静真空中生长的前哨。模块化舱段、可展开太阳翼与自主机械臂，共同维持六名航天员的轨道生活。
+        </p>
+        <div class="info-specs" id="info-specs">
+          <div><span>在轨质量</span><strong>420 t</strong></div>
+          <div><span>整体翼展</span><strong>62.9 m</strong></div>
+          <div><span>额定乘员</span><strong>6 人</strong></div>
+        </div>
+      </section>
+
+      <div class="hotspots" id="hotspots" aria-label="空间站模块热点"></div>
+
+      <nav class="bottom-dock hud" aria-label="场景导航">
+        <div class="dock-hint">
+          <span class="mouse-glyph" aria-hidden="true"><i></i></span>
+          <span>拖拽旋转</span>
+          <span class="hint-sep">/</span>
+          <span>滚轮缩放</span>
+        </div>
+
+        <div class="dock-nav">
+          <button class="view-button is-active" type="button" data-focus="overview">
+            <span>00</span>全景
+          </button>
+          <button class="view-button" type="button" data-focus="core">
+            <span>01</span>核心舱
+          </button>
+          <button class="view-button" type="button" data-focus="lab">
+            <span>02</span>实验舱
+          </button>
+          <button class="view-button" type="button" data-focus="solar">
+            <span>03</span>太阳翼
+          </button>
+          <button class="view-button" type="button" data-focus="arm">
+            <span>04</span>机械臂
+          </button>
+        </div>
+
+        <div class="dock-toggles">
+          <button class="toggle is-on" id="auto-cruise" type="button" aria-pressed="true">
+            自动巡航
+            <span class="switch" aria-hidden="true"><i></i></span>
+          </button>
+          <button class="toggle is-on" id="solar-track" type="button" aria-pressed="true">
+            太阳翼追踪
+            <span class="switch" aria-hidden="true"><i></i></span>
+          </button>
+        </div>
+      </nav>
+
+      <div class="orbit-index hud" aria-hidden="true">
+        <span>ORBIT 64 782</span>
+        <span class="orbit-index-line"></span>
+        <span>INC 41.5°</span>
+      </div>
+    </div>
+
+    <div class="loader" id="loader" role="status" aria-live="polite">
+      <div class="loader-grid" aria-hidden="true"></div>
+      <div class="loader-content">
+        <div class="loader-orbit" aria-hidden="true">
+          <span class="loader-orbit-ring"></span>
+          <span class="loader-orbit-ring loader-orbit-ring-alt"></span>
+          <span class="loader-orbit-core"></span>
+        </div>
+        <div class="loader-kicker">TIANQIONG / SOLAR ATLAS</div>
+        <div class="loader-title">正在展开太阳系</div>
+        <div class="loader-status" id="loader-status">正在校准日心坐标</div>
+        <div class="loader-progress">
+          <span class="loader-bar" id="loader-bar"></span>
+        </div>
+        <div class="loader-meta">
+          <span id="loader-percent">000</span>
+          <span>EPHEMERIS SYNC · SECURE</span>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="no-script">
+        <strong>需要启用 JavaScript</strong>
+        <p>太阳系星图与空间站三维场景依赖 JavaScript 与 WebGL 运行。</p>
+      </div>
+    </noscript>
+
+    <div class="mission-modal" id="mission-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="mission-title">
+      <div class="mission-card">
+        <button class="mission-close" id="mission-close" type="button" aria-label="关闭任务档案">×</button>
+        <div class="mission-kicker">MISSION DOSSIER / 2026</div>
+        <h2 id="mission-title">让轨道成为<br />人类长期居住的地方。</h2>
+        <p class="mission-lede">
+          天穹空间站是一座面向深空探索的模块化近地轨道前哨。它由核心舱、两个实验舱、大型桁架与四组太阳翼组成，
+          支持六名航天员长期驻留，并为材料科学、生命科学与地球观测提供微重力平台。
+        </p>
+        <div class="mission-grid">
+          <div><span>任务代号</span><strong>TQ-01</strong></div>
+          <div><span>轨道类型</span><strong>LEO · 41.5°</strong></div>
+          <div><span>设计寿命</span><strong>15 年</strong></div>
+          <div><span>在轨质量</span><strong>420 t</strong></div>
+          <div><span>能源阵列</span><strong>120 kW</strong></div>
+          <div><span>驻留乘员</span><strong>6 人</strong></div>
+        </div>
+        <div class="mission-note">
+          <span>可视化说明</span>
+          <p>场景中的全部结构均由程序化几何构建，并实时渲染于 Three.js。拖拽场景或选择底部模块索引，可进入不同舱段视角。</p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
