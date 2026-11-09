@@ -88,3 +88,10 @@ node scripts/planets.cjs
 ```
 
 截图输出到 `shots/`。
+
+
+## 如果你想在线体验，我们提供已部署地址
+https://space.brightweb.top
+
+
+
