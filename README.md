@@ -15,7 +15,7 @@ npm install
 npm start
 ```
 
-浏览器打开 **http://127.0.0.1:8137**。
+浏览器打开 ** http://127.0.0.1:8137 **。
 
 也可以使用任意静态服务器从项目根目录启动。页面依赖 `node_modules/three` 的本地 ES Module 路径，因此不能直接双击 `index.html` 通过 `file://` 打开。
 
